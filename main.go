@@ -140,7 +140,7 @@ func fetchUrlChart(url string, name string, version string) {
 	}
 }
 
-func addFile(tw *tar.Writer, path string) error {
+func addFile(tw *tar.Writer, path string, base string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -149,9 +149,9 @@ func addFile(tw *tar.Writer, path string) error {
 	if stat, err := file.Stat(); err == nil {
 		// now lets create the header as needed for this file within the tarball
 		header := new(tar.Header)
-		header.Name = path
+		header.Name = strings.TrimLeft(strings.TrimLeft(path, base), "/")
 		header.Size = stat.Size()
-		header.Mode = int64(stat.Mode())
+		header.Mode = int64(0644)
 		header.ModTime = stat.ModTime()
 		// write the header to the tarball archive
 		if err := tw.WriteHeader(header); err != nil {
@@ -168,24 +168,25 @@ func addFile(tw *tar.Writer, path string) error {
 func fetchFileChart(path string, name string, version string) (*os.File, error) {
 	file, err := os.Create(fmt.Sprintf("charts/%s-%s.tar.gz", name, version))
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Error: %v+", err)
 	}
 	defer file.Close()
-	// set up the gzip writer
+
 	gw := gzip.NewWriter(file)
 	defer gw.Close()
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// grab the paths that need to be added in
-	err = filepath.Walk(strings.TrimLeft(path, "file://"),
+	repoPath := strings.TrimLeft(path, "file://")
+
+	err = filepath.Walk(repoPath,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 			if !info.IsDir() {
-				if err := addFile(tw, path); err != nil {
-					log.Fatalln(err)
+				if err := addFile(tw, path, filepath.Base(filepath.Dir(repoPath))); err != nil {
+					log.Fatalf("Error: %v+", err)
 				}
 			}
 			return nil
@@ -212,6 +213,7 @@ func fetchVersion(dependency Dependency) error {
 		chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
 		fetchUrlChart(chart, dependency.Name, version.String())
 	} else {
+
 		fetchFileChart(dependency.Repository, dependency.Name, dependency.Version)
 	}
 
@@ -219,23 +221,17 @@ func fetchVersion(dependency Dependency) error {
 }
 
 func main() {
-	fmt.Println("Fetching requirements.yaml dependencies")
-	dependencies, err := fetchRequirements()
+	requirements, err := fetchRequirements()
 	if err != nil {
 		fmt.Printf("Error: %v+", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Read requirements.yaml dependencies")
-
-	for _, dependency := range dependencies.Dependencies {
+	for _, dependency := range requirements.Dependencies {
 		fmt.Printf("Fetching %s @ %s\n", dependency.Name, dependency.Version)
 		err := fetchVersion(dependency)
 		if err != nil {
-			fmt.Printf("Error: %v+", err)
-			os.Exit(1)
+			log.Fatalf("Error: %v+", err)
 		}
 	}
-
-	fmt.Println("Done")
 }
