@@ -24,7 +24,7 @@ type Requirements struct {
 }
 
 type Entry struct {
-	ApiVersion  string   `yaml:"apiVersion,omitempty"`
+	APIVersion  string   `yaml:"apiVersion,omitempty"`
 	AppVersion  string   `yaml:"appVersion,omitempty"`
 	Created     string   `yaml:"created,omitempty"`
 	Description string   `yaml:"description,omitempty"`
@@ -35,7 +35,7 @@ type Entry struct {
 }
 
 type Index struct {
-	ApiVersion string             `yaml:"apiVersion"`
+	APIVersion string             `yaml:"apiVersion"`
 	Entries    map[string][]Entry `yaml:"entries"`
 	Generated  string             `yaml:"generated"`
 	ServerInfo string             `yaml:"serverInfo"`
@@ -119,7 +119,6 @@ func resolveSemver(version string, entries []Entry) (*semver.Version, error) {
 var indexes map[string]Index = map[string]Index{}
 
 func fetchVersion(dependency Dependency) error {
-
 	if _, ok := indexes[dependency.Repository]; !ok {
 		index, err := fetchIndex(dependency.Repository)
 		if err != nil {
@@ -150,7 +149,6 @@ func fetchVersion(dependency Dependency) error {
 }
 
 func main() {
-
 	fmt.Println("Fetching requirements.yaml dependencies")
 	dependencies, err := fetchRequirements()
 	if err != nil {
