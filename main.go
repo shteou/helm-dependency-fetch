@@ -1,11 +1,16 @@
 package main
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -116,34 +121,99 @@ func resolveSemver(version string, entries []Entry) (*semver.Version, error) {
 	return largest, nil
 }
 
-var indexes map[string]Index = map[string]Index{}
-
-func fetchVersion(dependency Dependency) error {
-	if _, ok := indexes[dependency.Repository]; !ok {
-		index, err := fetchIndex(dependency.Repository)
-		if err != nil {
-			return err
-		}
-		indexes[dependency.Repository] = *index
-	}
-
-	version, err := resolveSemver(dependency.Version, indexes[dependency.Repository].Entries[dependency.Name])
-
+func fetchUrlChart(url string, name string, version string) {
+	fmt.Printf("\tFetching chart: %s\n", url)
+	resp, err := http.Get(url)
 	if err != nil {
-		return err
-	}
-
-	chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
-	fmt.Printf("\tFetching chart: %s\n", chart)
-	resp, err := http.Get(chart)
-	if err != nil {
-		return err
+		log.Fatal("Failed to fetch chart")
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Unable to fetch chart")
+	}
 
-	fmt.Printf("Chart is %d bytes in size\n", len(body))
+	err = ioutil.WriteFile(fmt.Sprintf("charts/%s-%s.tgz", name, version), body, 0644)
+	if err != nil {
+		log.Fatal("Unable to write chart")
+	}
+}
+
+func addFile(tw *tar.Writer, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if stat, err := file.Stat(); err == nil {
+		// now lets create the header as needed for this file within the tarball
+		header := new(tar.Header)
+		header.Name = path
+		header.Size = stat.Size()
+		header.Mode = int64(stat.Mode())
+		header.ModTime = stat.ModTime()
+		// write the header to the tarball archive
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+		// copy the file data to the tarball
+		if _, err := io.Copy(tw, file); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func fetchFileChart(path string, name string, version string) (*os.File, error) {
+	file, err := os.Create(fmt.Sprintf("charts/%s-%s.tar.gz", name, version))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	defer file.Close()
+	// set up the gzip writer
+	gw := gzip.NewWriter(file)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	// grab the paths that need to be added in
+	err = filepath.Walk(strings.TrimLeft(path, "file://"),
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				if err := addFile(tw, path); err != nil {
+					log.Fatalln(err)
+				}
+			}
+			return nil
+		})
+
+	return file, err
+}
+
+var indexes map[string]Index = map[string]Index{}
+
+func fetchVersion(dependency Dependency) error {
+	if !strings.HasPrefix(dependency.Repository, "file://") {
+		if _, ok := indexes[dependency.Repository]; !ok {
+			index, err := fetchIndex(dependency.Repository)
+			if err != nil {
+				return err
+			}
+			indexes[dependency.Repository] = *index
+		}
+		version, err := resolveSemver(dependency.Version, indexes[dependency.Repository].Entries[dependency.Name])
+		if err != nil {
+			return err
+		}
+		chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
+		fetchUrlChart(chart, dependency.Name, version.String())
+	} else {
+		fetchFileChart(dependency.Repository, dependency.Name, dependency.Version)
+	}
 
 	return nil
 }
