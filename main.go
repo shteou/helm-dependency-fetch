@@ -19,7 +19,7 @@ type Dependency struct {
 	Version    string `yaml:"version"`
 }
 
-type Dependencies struct {
+type Requirements struct {
 	Dependencies []Dependency `yaml:"dependencies"`
 }
 
@@ -63,21 +63,21 @@ func fetchIndex(repo string) (*Index, error) {
 	return &index, nil
 }
 
-func fetchDependencies() (*Dependencies, error) {
+func fetchRequirements() (*Requirements, error) {
 	fmt.Println("Reading requirements.yaml")
 
-	dependencies := Dependencies{}
+	requirements := Requirements{}
 	data, err := ioutil.ReadFile("requirements.yaml")
 	if err != nil {
 		return nil, err
 	}
 
-	err = yaml.Unmarshal([]byte(data), &dependencies)
+	err = yaml.Unmarshal([]byte(data), &requirements)
 	if err != nil {
 		return nil, err
 	}
 
-	return &dependencies, nil
+	return &requirements, nil
 }
 
 func largestSemver(versions []*semver.Version) *semver.Version {
@@ -88,10 +88,10 @@ func largestSemver(versions []*semver.Version) *semver.Version {
 	return versions[len(versions)-1]
 }
 
-func resolveSemver(version string, entries []Entry) (string, error) {
+func resolveSemver(version string, entries []Entry) (*semver.Version, error) {
 	c, err := semver.NewConstraint(version)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	versions := []*semver.Version{}
@@ -99,7 +99,7 @@ func resolveSemver(version string, entries []Entry) (string, error) {
 	for _, entry := range entries {
 		v, err := semver.NewVersion(entry.Version)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		a, _ := c.Validate(v)
@@ -110,10 +110,10 @@ func resolveSemver(version string, entries []Entry) (string, error) {
 
 	largest := largestSemver(versions)
 	if largest == nil {
-		return "", errors.New("Couldn't find a semver to satisfy the constraint")
+		return nil, errors.New("Couldn't find a semver to satisfy the constraint")
 	}
 
-	return largest.String(), nil
+	return largest, nil
 }
 
 var indexes map[string]Index = map[string]Index{}
@@ -134,7 +134,7 @@ func fetchVersion(dependency Dependency) error {
 		return err
 	}
 
-	chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version)
+	chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
 	fmt.Printf("\tFetching chart: %s\n", chart)
 	resp, err := http.Get(chart)
 	if err != nil {
@@ -152,7 +152,7 @@ func fetchVersion(dependency Dependency) error {
 func main() {
 
 	fmt.Println("Fetching requirements.yaml dependencies")
-	dependencies, err := fetchDependencies()
+	dependencies, err := fetchRequirements()
 	if err != nil {
 		fmt.Printf("Error: %v+", err)
 		os.Exit(1)
