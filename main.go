@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"sort"
 	"strings"
 
@@ -165,34 +164,12 @@ func addFile(tw *tar.Writer, path string, base string) error {
 	return nil
 }
 
-func fetchFileChart(path string, name string, version string) (*os.File, error) {
-	file, err := os.Create(fmt.Sprintf("charts/%s-%s.tar.gz", name, version))
-	if err != nil {
-		log.Fatalf("Error: %v+", err)
-	}
-	defer file.Close()
-
-	gw := gzip.NewWriter(file)
-	defer gw.Close()
-	tw := tar.NewWriter(gw)
-	defer tw.Close()
-
+func fetchFileChart(path string) error {
 	repoPath := strings.TrimLeft(path, "file://")
 
-	err = filepath.Walk(repoPath,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() {
-				if err := addFile(tw, path, filepath.Base(filepath.Dir(repoPath))); err != nil {
-					log.Fatalf("Error: %v+", err)
-				}
-			}
-			return nil
-		})
+	err := exec.Command("helm", "package", repoPath, "-d", "charts/").Run()
 
-	return file, err
+	return err
 }
 
 var indexes map[string]Index = map[string]Index{}
@@ -213,10 +190,9 @@ func fetchVersion(dependency Dependency) error {
 		chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
 		fetchUrlChart(chart, dependency.Name, version.String())
 	} else {
-
-		fetchFileChart(dependency.Repository, dependency.Name, dependency.Version)
+		err := fetchFileChart(dependency.Repository)
+		return err
 	}
-
 	return nil
 }
 
