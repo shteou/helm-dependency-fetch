@@ -17,6 +17,11 @@ import (
 	"gopkg.in/yaml.v1"
 )
 
+type Chart struct {
+	APIVersion   string       `yaml:"apiVersion"`
+	Dependencies []Dependency `yaml:"dependencies,omitempty"`
+}
+
 type Dependency struct {
 	Name       string `yaml:"name"`
 	Repository string `yaml:"repository"`
@@ -67,9 +72,19 @@ func fetchIndex(repo string) (*Index, error) {
 	return &index, nil
 }
 
-func fetchRequirements() (*Requirements, error) {
-	fmt.Println("Reading requirements.yaml")
+func fetchChart() (*Chart, error) {
+	data, err := ioutil.ReadFile("Chart.yaml")
+	if err != nil {
+		return nil, err
+	}
 
+	chart := Chart{}
+	err = yaml.Unmarshal([]byte(data), &chart)
+
+	return &chart, err
+}
+
+func fetchRequirements() (*[]Dependency, error) {
 	requirements := Requirements{}
 	data, err := ioutil.ReadFile("requirements.yaml")
 	if err != nil {
@@ -77,11 +92,19 @@ func fetchRequirements() (*Requirements, error) {
 	}
 
 	err = yaml.Unmarshal([]byte(data), &requirements)
+	return &requirements.Dependencies, err
+}
+
+func fetchDependencies() (*[]Dependency, error) {
+	chart, err := fetchChart()
 	if err != nil {
 		return nil, err
 	}
 
-	return &requirements, nil
+	if chart.APIVersion == "v1" {
+		return fetchRequirements()
+	}
+	return &chart.Dependencies, nil
 }
 
 func largestSemver(versions []*semver.Version) *semver.Version {
@@ -206,13 +229,13 @@ func fetchVersion(dependency Dependency) error {
 }
 
 func main() {
-	requirements, err := fetchRequirements()
+	dependencies, err := fetchDependencies()
 	if err != nil {
 		fmt.Printf("Error: %v+", err)
 		os.Exit(1)
 	}
 
-	for _, dependency := range requirements.Dependencies {
+	for _, dependency := range *dependencies {
 		fmt.Printf("Fetching %s @ %s\n", dependency.Name, dependency.Version)
 		err := fetchVersion(dependency)
 		if err != nil {
