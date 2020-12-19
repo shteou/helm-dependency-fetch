@@ -120,23 +120,21 @@ func resolveSemver(version string, entries []Entry) (*semver.Version, error) {
 	return largest, nil
 }
 
-func fetchUrlChart(url string, name string, version string) {
+func fetchURLChart(url string, name string, version string) error {
 	fmt.Printf("\tFetching chart: %s\n", url)
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal("Failed to fetch chart")
+		return err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal("Unable to fetch chart")
+		return err
 	}
 
 	err = ioutil.WriteFile(fmt.Sprintf("charts/%s-%s.tgz", name, version), body, 0644)
-	if err != nil {
-		log.Fatal("Unable to write chart")
-	}
+	return err
 }
 
 func addFile(tw *tar.Writer, path string, base string) error {
@@ -174,26 +172,37 @@ func fetchFileChart(path string) error {
 
 var indexes map[string]Index = map[string]Index{}
 
+func getIndex(repo string) (*Index, error) {
+	var index Index
+
+	if _, ok := indexes[repo]; !ok {
+		retrievedIndex, err := fetchIndex(repo)
+		if err != nil {
+			return nil, err
+		}
+		indexes[repo] = *retrievedIndex
+	}
+
+	index = indexes[repo]
+	return &index, nil
+}
+
 func fetchVersion(dependency Dependency) error {
 	if !strings.HasPrefix(dependency.Repository, "file://") {
-		if _, ok := indexes[dependency.Repository]; !ok {
-			index, err := fetchIndex(dependency.Repository)
-			if err != nil {
-				return err
-			}
-			indexes[dependency.Repository] = *index
+		index, err := getIndex(dependency.Repository)
+		if err != nil {
+			return err
 		}
-		version, err := resolveSemver(dependency.Version, indexes[dependency.Repository].Entries[dependency.Name])
+
+		version, err := resolveSemver(dependency.Version, index.Entries[dependency.Name])
 		if err != nil {
 			return err
 		}
 		chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
-		fetchUrlChart(chart, dependency.Name, version.String())
-	} else {
-		err := fetchFileChart(dependency.Repository)
-		return err
+		return fetchURLChart(chart, dependency.Name, version.String())
 	}
-	return nil
+
+	return fetchFileChart(dependency.Repository)
 }
 
 func main() {
