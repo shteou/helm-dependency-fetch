@@ -11,8 +11,7 @@ COPY main.go main.go
 COPY handlers handlers
 COPY k8s k8s
 
-RUN go build -ldflags="-w -s" main.go
-RUN mv main helm-dependency-fetch
+RUN go build -o helm-dependency-fetch -ldflags="-w -s" main.go
 
 FROM debian:buster-slim as production
 
