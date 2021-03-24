@@ -93,7 +93,7 @@ func fetchRequirements() (*[]Dependency, error) {
 	return &requirements.Dependencies, err
 }
 
-func fetchDependencies() (*[]Dependency, error) {
+func parseDependencies() (*[]Dependency, error) {
 	chart, err := fetchChart()
 	if err != nil {
 		return nil, err
@@ -202,7 +202,7 @@ func fetchVersion(dependency Dependency) error {
 }
 
 func main() {
-	dependencies, err := fetchDependencies()
+	dependencies, err := parseDependencies()
 	if err != nil {
 		fmt.Printf("Error: %v+", err)
 		os.Exit(1)
