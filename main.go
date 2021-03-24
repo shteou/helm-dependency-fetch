@@ -235,6 +235,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if _, err := os.Stat("charts"); os.IsNotExist(err) {
+		os.Mkdir("charts", 0755)
+	}
+
 	for _, dependency := range *dependencies {
 		fmt.Printf("Fetching %s @ %s\n", dependency.Name, dependency.Version)
 		err := fetchVersion(dependency)
