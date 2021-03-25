@@ -159,7 +159,7 @@ func fetchURLChart(url string, name string, version string) error {
 }
 
 func fetchFileChart(path string) error {
-	repoPath := strings.TrimLeft(path, "file://")
+	repoPath := strings.TrimPrefix(path, "file://")
 
 	err := exec.Command("helm", "package", repoPath, "-d", "charts/").Run()
 
