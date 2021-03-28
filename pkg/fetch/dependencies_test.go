@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -9,13 +10,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func copyTestData(t *testing.T, fs afero.Fs, src string, target string) {
+	bytes, err := ioutil.ReadFile(src)
+	assert.Nil(t, err, fmt.Sprintf("Unable to read %s", src))
+
+	err = afero.WriteFile(fs, target, bytes, 0644)
+	assert.Nil(t, err, fmt.Sprintf("Unable to write %s", target))
+}
+
 func TestParseDependenciesV2(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	chartBytes, err := ioutil.ReadFile("test_data/v2chart/Chart.yaml")
-	assert.Nil(t, err, "Unable to read Chart.yaml")
-
-	err = afero.WriteFile(fs, "Chart.yaml", chartBytes, 0644)
-	assert.Nil(t, err, "Unable to write Chart.yaml")
+	copyTestData(t, fs, "test_data/v2chart/Chart.yaml", "Chart.yaml")
 
 	hdf := HelmDependencyFetch{Fs: fs}
 	deps, err := hdf.ParseDependencies()
@@ -26,17 +31,8 @@ func TestParseDependenciesV2(t *testing.T) {
 
 func TestParseDependenciesV1(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	chartBytes, err := ioutil.ReadFile("test_data/v1chart/Chart.yaml")
-	assert.Nil(t, err, "Unable to read Chart.yaml")
-
-	err = afero.WriteFile(fs, "Chart.yaml", chartBytes, 0644)
-	assert.Nil(t, err, "Unable to write Chart.yaml")
-
-	requirementsBytes, err := ioutil.ReadFile("test_data/v1chart/requirements.yaml")
-	assert.Nil(t, err, "Unable to read requirements.yaml")
-
-	err = afero.WriteFile(fs, "requirements.yaml", requirementsBytes, 0644)
-	assert.Nil(t, err, "Unable to write requirements.yaml")
+	copyTestData(t, fs, "test_data/v1chart/Chart.yaml", "Chart.yaml")
+	copyTestData(t, fs, "test_data/v1chart/requirements.yaml", "requirements.yaml")
 
 	hdf := HelmDependencyFetch{Fs: fs}
 	deps, err := hdf.ParseDependencies()
