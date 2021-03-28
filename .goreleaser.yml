@@ -1,0 +1,9 @@
+builds:
+  - id: helm-dependency-fetch-linux-amd64
+    main: ./cmd/fetch/main.go
+
+  - id: helm-dependency-fetch-darwin-amd64
+    main: ./cmd/fetch/main.go
+
+  - id: helm-dependency-fetch-windows-amd64
+    main: ./cmd/fetch/main.go
