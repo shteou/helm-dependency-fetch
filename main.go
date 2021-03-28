@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v1"
 )
 
@@ -48,7 +49,11 @@ type Index struct {
 	ServerInfo string             `yaml:"serverInfo"`
 }
 
-func fetchIndex(repo string) (*Index, error) {
+type Context struct {
+	fs afero.Fs
+}
+
+func (c *Context) fetchIndex(repo string) (*Index, error) {
 	index := Index{}
 
 	fmt.Printf("Fetching index from %s\n", repo)
@@ -70,7 +75,7 @@ func fetchIndex(repo string) (*Index, error) {
 	return &index, nil
 }
 
-func fetchChart() (*Chart, error) {
+func (c *Context) fetchChart() (*Chart, error) {
 	data, err := ioutil.ReadFile("Chart.yaml")
 	if err != nil {
 		return nil, err
@@ -82,7 +87,7 @@ func fetchChart() (*Chart, error) {
 	return &chart, err
 }
 
-func fetchRequirements() (*[]Dependency, error) {
+func (c *Context) fetchRequirements() (*[]Dependency, error) {
 	requirements := Requirements{}
 	data, err := ioutil.ReadFile("requirements.yaml")
 	if err != nil {
@@ -93,14 +98,14 @@ func fetchRequirements() (*[]Dependency, error) {
 	return &requirements.Dependencies, err
 }
 
-func parseDependencies() (*[]Dependency, error) {
-	chart, err := fetchChart()
+func (c *Context) parseDependencies() (*[]Dependency, error) {
+	chart, err := c.fetchChart()
 	if err != nil {
 		return nil, err
 	}
 
 	if chart.APIVersion == "v1" {
-		return fetchRequirements()
+		return c.fetchRequirements()
 	}
 	return &chart.Dependencies, nil
 }
@@ -141,7 +146,7 @@ func resolveSemver(version string, entries []Entry) (*semver.Version, error) {
 	return largest, nil
 }
 
-func fetchURLChart(url string, name string, version string) error {
+func (c *Context) fetchURLChart(url string, name string, version string) error {
 	fmt.Printf("\tFetching chart: %s\n", url)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -158,7 +163,7 @@ func fetchURLChart(url string, name string, version string) error {
 	return err
 }
 
-func fetchFileChart(path string) error {
+func (c *Context) fetchFileChart(path string) error {
 	repoPath := strings.TrimPrefix(path, "file://")
 
 	err := exec.Command("helm", "package", repoPath, "-d", "charts/").Run()
@@ -168,11 +173,11 @@ func fetchFileChart(path string) error {
 
 var indexes map[string]Index = map[string]Index{}
 
-func getIndex(repo string) (*Index, error) {
+func (c *Context) getIndex(repo string) (*Index, error) {
 	var index Index
 
 	if _, ok := indexes[repo]; !ok {
-		retrievedIndex, err := fetchIndex(repo)
+		retrievedIndex, err := c.fetchIndex(repo)
 		if err != nil {
 			return nil, err
 		}
@@ -183,9 +188,9 @@ func getIndex(repo string) (*Index, error) {
 	return &index, nil
 }
 
-func fetchVersion(dependency Dependency) error {
+func (c *Context) fetchVersion(dependency Dependency) error {
 	if !strings.HasPrefix(dependency.Repository, "file://") {
-		index, err := getIndex(dependency.Repository)
+		index, err := c.getIndex(dependency.Repository)
 		if err != nil {
 			return err
 		}
@@ -195,26 +200,38 @@ func fetchVersion(dependency Dependency) error {
 			return err
 		}
 		chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
-		return fetchURLChart(chart, dependency.Name, version.String())
+		return c.fetchURLChart(chart, dependency.Name, version.String())
 	}
 
-	return fetchFileChart(dependency.Repository)
+	return c.fetchFileChart(dependency.Repository)
+}
+
+func (c *Context) createChartsDirectory() error {
+	_, err := c.fs.Stat("charts")
+	if os.IsNotExist(err) {
+		err = c.fs.Mkdir("charts", 0755)
+		return err
+	}
+	return err
 }
 
 func main() {
-	dependencies, err := parseDependencies()
+	c := Context{fs: afero.NewOsFs()}
+
+	dependencies, err := c.parseDependencies()
 	if err != nil {
 		fmt.Printf("Error: %v+", err)
 		os.Exit(1)
 	}
 
-	if _, err := os.Stat("charts"); os.IsNotExist(err) {
-		os.Mkdir("charts", 0755)
+	err = c.createChartsDirectory()
+	if err != nil {
+		log.Fatalf("Failed to manage charts directory %v+", err)
 	}
 
 	for _, dependency := range *dependencies {
 		fmt.Printf("Fetching %s @ %s\n", dependency.Name, dependency.Version)
-		err := fetchVersion(dependency)
+		err := c.fetchVersion(dependency)
 		if err != nil {
 			log.Fatalf("Error: %v+", err)
 		}
