@@ -5,11 +5,10 @@ import (
 	"log"
 
 	"github.com/shteou/helm-dependency-fetch/pkg/fetch"
-	"github.com/spf13/afero"
 )
 
 func main() {
-	f := fetch.NewHelmDependencyFetch(afero.NewOsFs())
+	f := fetch.NewHelmDependencyFetch()
 
 	dependencies, err := f.ParseDependencies()
 	if err != nil {

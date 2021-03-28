@@ -18,12 +18,25 @@ import (
 
 type HelmDependencyFetch struct {
 	Fs      afero.Fs
+	Get     Getter
 	Indexes map[string]helm.Index
 }
 
-func NewHelmDependencyFetch(fs afero.Fs) *HelmDependencyFetch {
+type Getter interface {
+	Get(string) (*http.Response, error)
+}
+
+type NetworkGetter struct {
+}
+
+func (NetworkGetter) Get(url string) (*http.Response, error) {
+	return http.Get(url)
+}
+
+func NewHelmDependencyFetch() *HelmDependencyFetch {
 	hdf := HelmDependencyFetch{
-		Fs:      fs,
+		Fs:      afero.NewOsFs(),
+		Get:     NetworkGetter{},
 		Indexes: map[string]helm.Index{},
 	}
 	return &hdf
@@ -61,6 +74,7 @@ func (f *HelmDependencyFetch) FetchVersion(dependency helm.Dependency) error {
 		if err != nil {
 			return err
 		}
+		// FIXME: Shouldd determine chart URL from URLs, relative + absolute
 		chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
 		return f.fetchURLChart(chart, dependency.Name, version.String())
 	}
@@ -73,7 +87,7 @@ func (f *HelmDependencyFetch) fetchIndex(repo string) (*helm.Index, error) {
 
 	fmt.Printf("Fetching index from %s\n", repo)
 
-	resp, err := http.Get(fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repo, "/")))
+	resp, err := f.Get.Get(fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repo, "/")))
 
 	if err != nil {
 		return nil, err
@@ -154,7 +168,7 @@ func resolveSemver(version string, entries []helm.Entry) (*semver.Version, error
 
 func (f *HelmDependencyFetch) fetchURLChart(url string, name string, version string) error {
 	fmt.Printf("\tFetching chart: %s\n", url)
-	resp, err := http.Get(url)
+	resp, err := f.Get.Get(url)
 	if err != nil {
 		return err
 	}
@@ -165,7 +179,7 @@ func (f *HelmDependencyFetch) fetchURLChart(url string, name string, version str
 		return err
 	}
 
-	err = ioutil.WriteFile(fmt.Sprintf("charts/%s-%s.tgz", name, version), body, 0644)
+	err = afero.WriteFile(f.Fs, fmt.Sprintf("charts/%s-%s.tgz", name, version), body, 0644)
 	return err
 }
 
