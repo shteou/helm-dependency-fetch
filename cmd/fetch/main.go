@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	f := fetch.HelmDependencyFetch{Fs: afero.NewOsFs()}
+	f := fetch.NewHelmDependencyFetch(afero.NewOsFs())
 
 	dependencies, err := f.ParseDependencies()
 	if err != nil {

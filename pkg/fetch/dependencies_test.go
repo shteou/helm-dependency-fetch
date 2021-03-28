@@ -22,7 +22,7 @@ func TestParseDependenciesV2(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	copyTestData(t, fs, "test_data/v2chart/Chart.yaml", "Chart.yaml")
 
-	hdf := HelmDependencyFetch{Fs: fs}
+	hdf := NewHelmDependencyFetch(fs)
 	deps, err := hdf.ParseDependencies()
 
 	assert.Nil(t, err, "Failed to parse ependencies from v2 Chart.yaml")
@@ -34,7 +34,7 @@ func TestParseDependenciesV1(t *testing.T) {
 	copyTestData(t, fs, "test_data/v1chart/Chart.yaml", "Chart.yaml")
 	copyTestData(t, fs, "test_data/v1chart/requirements.yaml", "requirements.yaml")
 
-	hdf := HelmDependencyFetch{Fs: fs}
+	hdf := NewHelmDependencyFetch(fs)
 	deps, err := hdf.ParseDependencies()
 
 	assert.Nil(t, err, "Failed to parse ependencies from v1 Chart.yaml")

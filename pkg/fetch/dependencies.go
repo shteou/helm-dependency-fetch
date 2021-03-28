@@ -17,7 +17,16 @@ import (
 )
 
 type HelmDependencyFetch struct {
-	Fs afero.Fs
+	Fs      afero.Fs
+	Indexes map[string]helm.Index
+}
+
+func NewHelmDependencyFetch(fs afero.Fs) *HelmDependencyFetch {
+	hdf := HelmDependencyFetch{
+		Fs:      fs,
+		Indexes: map[string]helm.Index{},
+	}
+	return &hdf
 }
 
 func (f *HelmDependencyFetch) CreateChartsDirectory() error {
@@ -168,19 +177,17 @@ func (f *HelmDependencyFetch) fetchFileChart(path string) error {
 	return err
 }
 
-var indexes map[string]helm.Index = map[string]helm.Index{}
-
 func (f *HelmDependencyFetch) getIndex(repo string) (*helm.Index, error) {
 	var index helm.Index
 
-	if _, ok := indexes[repo]; !ok {
+	if _, ok := f.Indexes[repo]; !ok {
 		retrievedIndex, err := f.fetchIndex(repo)
 		if err != nil {
 			return nil, err
 		}
-		indexes[repo] = *retrievedIndex
+		f.Indexes[repo] = *retrievedIndex
 	}
 
-	index = indexes[repo]
+	index = f.Indexes[repo]
 	return &index, nil
 }
