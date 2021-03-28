@@ -85,7 +85,7 @@ func (f *HelmDependencyFetch) fetchIndex(repo string) (*helm.Index, error) {
 }
 
 func (f *HelmDependencyFetch) fetchChart() (*helm.Chart, error) {
-	data, err := ioutil.ReadFile("Chart.yaml")
+	data, err := afero.ReadFile(f.Fs, "Chart.yaml")
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (f *HelmDependencyFetch) fetchChart() (*helm.Chart, error) {
 
 func (f *HelmDependencyFetch) fetchRequirements() (*[]helm.Dependency, error) {
 	requirements := helm.Requirements{}
-	data, err := ioutil.ReadFile("requirements.yaml")
+	data, err := afero.ReadFile(f.Fs, "requirements.yaml")
 	if err != nil {
 		return nil, err
 	}
