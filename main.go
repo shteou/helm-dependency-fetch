@@ -66,6 +66,9 @@ func (c *Context) fetchIndex(repo string) (*Index, error) {
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	err = yaml.Unmarshal([]byte(body), &index)
 	if err != nil {
@@ -133,14 +136,14 @@ func resolveSemver(version string, entries []Entry) (*semver.Version, error) {
 		}
 
 		a, _ := c.Validate(v)
-		if a == true {
+		if a {
 			versions = append(versions, v)
 		}
 	}
 
 	largest := largestSemver(versions)
 	if largest == nil {
-		return nil, errors.New("Couldn't find a semver to satisfy the constraint")
+		return nil, errors.New("couldn't find a semver to satisfy the constraint")
 	}
 
 	return largest, nil
@@ -220,20 +223,19 @@ func main() {
 
 	dependencies, err := c.parseDependencies()
 	if err != nil {
-		fmt.Printf("Error: %v+", err)
-		os.Exit(1)
+		log.Fatalf("Error parsing dependencies: %+v", err)
 	}
 
 	err = c.createChartsDirectory()
 	if err != nil {
-		log.Fatalf("Failed to manage charts directory %v+", err)
+		log.Fatalf("Failed to manage charts directory %+v", err)
 	}
 
 	for _, dependency := range *dependencies {
 		fmt.Printf("Fetching %s @ %s\n", dependency.Name, dependency.Version)
 		err := c.fetchVersion(dependency)
 		if err != nil {
-			log.Fatalf("Error: %v+", err)
+			log.Fatalf("Error fetching dependencies: %+v", err)
 		}
 	}
 }
