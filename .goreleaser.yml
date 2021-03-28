@@ -1,9 +1,31 @@
+# This is an example .goreleaser.yml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    # you may remove this if you don't need go generate
+    - go generate ./...
 builds:
-  - id: helm-dependency-fetch-linux-amd64
-    main: ./cmd/fetch/main.go
-
-  - id: helm-dependency-fetch-darwin-amd64
-    main: ./cmd/fetch/main.go
-
-  - id: helm-dependency-fetch-windows-amd64
-    main: ./cmd/fetch/main.go
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    main: ./cmd/fetch/main.go    
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
