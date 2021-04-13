@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"sort"
@@ -70,13 +71,23 @@ func (f *HelmDependencyFetch) FetchVersion(dependency helm.Dependency) error {
 			return err
 		}
 
-		version, err := resolveSemver(dependency.Version, index.Entries[dependency.Name])
+		version, entry, err := resolveSemver(dependency.Version, index.Entries[dependency.Name])
 		if err != nil {
 			return err
 		}
-		// FIXME: Shouldd determine chart URL from URLs, relative + absolute
-		chart := fmt.Sprintf("%s/charts/%s-%s.tgz", strings.TrimSuffix(dependency.Repository, "/"), dependency.Name, version.Original())
-		return f.fetchURLChart(chart, dependency.Name, version.String())
+
+		chartUrl, err := url.Parse(entry.Urls[0])
+		if err != nil {
+			return err
+		}
+
+		var chartUrlString string
+		if chartUrl.IsAbs() {
+			chartUrlString = entry.Urls[0]
+		} else {
+			chartUrlString = fmt.Sprintf("%s/%s", strings.TrimSuffix(dependency.Repository, "/"), entry.Urls[0])
+		}
+		return f.fetchURLChart(chartUrlString, dependency.Name, version.String())
 	}
 
 	return f.fetchFileChart(dependency.Repository)
@@ -138,10 +149,20 @@ func largestSemver(versions []*semver.Version) *semver.Version {
 	return versions[len(versions)-1]
 }
 
-func resolveSemver(version string, entries []helm.Entry) (*semver.Version, error) {
+func findEntryByVersion(version string, entries []helm.Entry) *helm.Entry {
+	for _, entry := range entries {
+		if entry.Version == version {
+			return &entry
+		}
+	}
+
+	return nil
+}
+
+func resolveSemver(version string, entries []helm.Entry) (*semver.Version, *helm.Entry, error) {
 	c, err := semver.NewConstraint(version)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	versions := []*semver.Version{}
@@ -149,7 +170,7 @@ func resolveSemver(version string, entries []helm.Entry) (*semver.Version, error
 	for _, entry := range entries {
 		v, err := semver.NewVersion(entry.Version)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		a, _ := c.Validate(v)
@@ -160,10 +181,10 @@ func resolveSemver(version string, entries []helm.Entry) (*semver.Version, error
 
 	largest := largestSemver(versions)
 	if largest == nil {
-		return nil, errors.New("couldn't find a semver to satisfy the constraint")
+		return nil, nil, errors.New("couldn't find a semver to satisfy the constraint")
 	}
 
-	return largest, nil
+	return largest, findEntryByVersion(largest.Original(), entries), nil
 }
 
 func (f *HelmDependencyFetch) fetchURLChart(url string, name string, version string) error {

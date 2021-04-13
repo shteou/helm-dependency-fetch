@@ -107,6 +107,32 @@ func TestFetchVersion(t *testing.T) {
 			"foo": {{
 				Name:    "foo",
 				Version: "0.1.0",
+				Urls:    []string{"charts/foo-0.1.0-tgz"},
+			}},
+		},
+	}
+
+	// When
+	err := hdf.FetchVersion(helm.Dependency{Name: "foo", Repository: "http://localhost:8080", Version: ">= 0.1.0"})
+
+	// Then
+	assert.NoError(t, err, "Failed to fetch chart version")
+	stat, err := fs.Stat("charts/foo-0.1.0.tgz")
+	assert.NoError(t, err, "Failed to check existence of downloaded chart")
+	assert.Greater(t, stat.Size(), int64(10), "Resulting chart package should be more than a few bytes in size")
+}
+
+func TestFetchVersionAbsoluteUrl(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	fs.Mkdir("charts", 0777)
+	mockResponse := MockGetter{Response: &http.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte("hello world")))}}
+	hdf := newHelmDependencyFetchTest(fs, mockResponse)
+	hdf.Indexes["http://localhost:8080"] = helm.Index{
+		Entries: map[string][]helm.Entry{
+			"foo": {{
+				Name:    "foo",
+				Version: "0.1.0",
+				Urls:    []string{"https://chart-repo.com/charts/foo-0.1.0-tgz"},
 			}},
 		},
 	}
