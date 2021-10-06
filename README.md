@@ -7,9 +7,29 @@ The tool reads dependencies from a `Chart.yaml` (API v2) file, or `requirements.
 
 ## Limitations
 
-The tool always fetches the latest indexes, exactly once. It resolves dependency versions on
-each run, regardless of whether there are existing charts. It does not support chart
-conditions to optimise downloading.
+The tool always fetches the latest indexes, exactly once per index.  
+It resolves dependency versions on each run, regardless of whether there are existing charts.  
+Only http(s) chart URLs are supported.
+
+## Usage
+
+`helm-dependency-fetch` can be installed from one of the [GitHub releases](https://github.com/shteou/helm-dependency-fetch/releases).  
+Ensure it's added somewhere on your `PATH` and simply run `helm-dependency-fetch` from your chart folder.
+
+Note: the chart manifest must exist in the current working directory, it offers no flags for overriding this.
+
+For example, here we have an v1 chart manifest (with separate requirements.yaml file).
+
+```
+➜  helm-dependency-fetch git:(master) ✗ ls -al *.yaml
+.rw-r--r-- 8.9k stew 27 Jun  1:09 -N Chart.yaml
+.rwxr-xr-x 1.6k stew 15 Dec  2020 -N requirements.yaml
+
+➜  helm-dependency-fetch git:(master) ✗ helm-dependency-fetch
+Fetching my-service @ >= 1.0.0
+Fetching index from https://my-repository.com/
+	Fetching chart: https://my-repository.com/charts/my-service-1.0.13.tgz
+```
 
 ## Why?
 
