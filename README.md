@@ -21,7 +21,7 @@ Ensure it's added somewhere on your `PATH` and simply run `helm-dependency-fetch
 helm tools for the remainder of the workflow.
 
 ```
-➜  helm-dependency-fetch helm-dependency-fetch -h
+➜  helm-dependency-fetch git:(master) ✗ helm-dependency-fetch -h
 helm-dependency-fetch [chartDir]
   helm-dependency-fetch is a drop in replacement for helm dependency build
   It will fetch the chart dependencies for the supplied chart. If no chart is supplied
