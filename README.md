@@ -20,7 +20,18 @@ Ensure it's added somewhere on your `PATH` and simply run `helm-dependency-fetch
 `helm-dependency-fetch` is used in place of `helm dependency build`. Once it has populated the charts folder, you can use standard
 helm tools for the remainder of the workflow.
 
-Note: the chart manifest must exist in the current working directory, it offers no flags for overriding this.
+```
+➜  helm-dependency-fetch git:(master) ✗ helm-dependency-fetch -h
+helm-dependency-fetch [chartDir]
+  helm-dependency-fetch is a drop in replacement for helm dependency build
+  It will fetch the chart dependencies for the supplied chart. If no chart is supplied
+  the current directory is assumed to be the chart directory
+  Note, lock files are not generated, and are ignored.
+  The tool will fetch the latest dependencies on each execution.
+
+Flags:
+  -h, --help  help for this command
+```
 
 In this example we use helm dependency fetch to gather the dependencies of a v2 chart and then use helm template.
 
@@ -36,19 +47,19 @@ Fetching index from https://my-repository.com/
   ...
 ```
 
-Or similarly with a v1 chart, with a separate requirements file.
+Or similarly with a v1 chart, with a separate requirements file, in another directory
 
 ```
-➜  helm-dependency-fetch git:(master) ✗ ls -al *.yaml
+➜  helm-dependency-fetch git:(master) ✗ ls -al my-chart/*.yaml
 .rw-r--r--  84 stew 27 Jun  1:01 -N Chart.yaml
 .rwxr-xr-x 146 stew 15 Dec  2020 -N requirements.yaml
 
-➜  helm-dependency-fetch git:(master) ✗ helm-dependency-fetch
+➜  helm-dependency-fetch git:(master) ✗ helm-dependency-fetch my-chart
 Fetching my-service @ >= 1.0.0
 Fetching index from https://my-repository.com/
 	Fetching chart: https://my-repository.com/charts/my-service-1.0.13.tgz
 
-➜  helm-dependency-fetch git:(master) ✗ helm template my-release .
+➜  helm-dependency-fetch git:(master) ✗ helm template my-release my-chart
   ...
 ```
 
