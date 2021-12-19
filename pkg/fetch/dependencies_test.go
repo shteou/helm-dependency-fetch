@@ -148,7 +148,7 @@ func TestFetchVersionAbsoluteUrl(t *testing.T) {
 }
 
 func TestCredsForRepository(t *testing.T) {
-	repos := helm.Repositories{Repositories: []helm.Repository{helm.Repository{Password: "foo", Username: "bar", Url: "http://localhost:8080"}}}
+	repos := helm.Repositories{Repositories: []helm.Repository{{Password: "foo", Username: "bar", Url: "http://localhost:8080"}}}
 	user, pass := getCredsForRepository(&repos, "http://localhost:8080")
 	assert.Equal(t, "foo", pass)
 	assert.Equal(t, "bar", user)
