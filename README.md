@@ -9,7 +9,7 @@ The tool reads dependencies from a `Chart.yaml` (API v2) file, or `requirements.
 
 The tool always fetches the latest indexes, exactly once per index.  
 It resolves dependency versions on each run, regardless of whether there are existing charts.  
-Only http(s) and file based URL schemes are supported.  
+Only http(s) and file based URL schemes are supported (optionally with basic auth).
 Lock files are not generated.
 
 ## Usage

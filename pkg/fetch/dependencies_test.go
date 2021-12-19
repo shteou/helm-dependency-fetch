@@ -18,7 +18,7 @@ type MockGetter struct {
 	Error    error
 }
 
-func (m MockGetter) Get(url string) (*http.Response, error) {
+func (m MockGetter) Get(url string, username string, password string) (*http.Response, error) {
 	return m.Response, m.Error
 }
 
@@ -145,4 +145,11 @@ func TestFetchVersionAbsoluteUrl(t *testing.T) {
 	stat, err := fs.Stat("charts/foo-0.1.0.tgz")
 	assert.NoError(t, err, "Failed to check existence of downloaded chart")
 	assert.Greater(t, stat.Size(), int64(10), "Resulting chart package should be more than a few bytes in size")
+}
+
+func TestCredsForRepository(t *testing.T) {
+	repos := helm.Repositories{Repositories: []helm.Repository{{Password: "foo", Username: "bar", Url: "http://localhost:8080"}}}
+	user, pass := getCredsForRepository(&repos, "http://localhost:8080")
+	assert.Equal(t, "foo", pass)
+	assert.Equal(t, "bar", user)
 }
