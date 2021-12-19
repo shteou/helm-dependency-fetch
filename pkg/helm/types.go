@@ -32,3 +32,13 @@ type Index struct {
 	Generated  string             `yaml:"generated"`
 	ServerInfo string             `yaml:"serverInfo"`
 }
+
+type Repositories struct {
+	Repositories []Repository `yaml:"repositories"`
+}
+
+type Repository struct {
+	Password string `yaml:"password"`
+	Url      string `yaml:"url"`
+	Username string `yaml:"username"`
+}
