@@ -1,9 +1,3 @@
-# This is an example .goreleaser.yml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
-before:
-  hooks:
-    # you may remove this if you don't need go generate
-    - go generate ./...
 builds:
   - env:
       - CGO_ENABLED=0
@@ -11,7 +5,7 @@ builds:
       - linux
       - windows
       - darwin
-    main: ./cmd/fetch/main.go    
+    main: ./cmd/fetch/main.go
 archives:
   - replacements:
       darwin: Darwin
@@ -29,3 +23,6 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+      - '^.github:'
+      - '^.goreleaser.yml'
+      - '^README.md'
