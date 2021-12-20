@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/shteou/helm-dependency-fetch/pkg/getters"
 	"github.com/shteou/helm-dependency-fetch/pkg/helm"
 	"github.com/spf13/afero"
 
@@ -22,7 +23,7 @@ func (m MockGetter) Get(url string, username string, password string) (*http.Res
 	return m.Response, m.Error
 }
 
-func newHelmDependencyFetchTest(fs afero.Fs, getter Getter) *HelmDependencyFetch {
+func newHelmDependencyFetchTest(fs afero.Fs, getter getters.Getter) *HelmDependencyFetch {
 	hdf := HelmDependencyFetch{
 		Fs:      fs,
 		Get:     getter,
@@ -37,64 +38,6 @@ func copyTestData(t *testing.T, fs afero.Fs, src string, target string) {
 
 	err = afero.WriteFile(fs, target, bytes, 0644)
 	assert.Nil(t, err, fmt.Sprintf("Unable to write %s", target))
-}
-
-func TestParseDependenciesV2(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	copyTestData(t, fs, "test_data/v2chart/Chart.yaml", "Chart.yaml")
-	hdf := newHelmDependencyFetchTest(fs, MockGetter{})
-
-	// When
-	deps, err := hdf.ParseDependencies()
-
-	// Then
-	assert.NoError(t, err, "Failed to parse ependencies from v2 Chart.yaml")
-	assert.Equal(t, 1, len(*deps), "Expected a single dependency to be parsed")
-}
-
-func TestParseDependenciesV1(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	copyTestData(t, fs, "test_data/v1chart/Chart.yaml", "Chart.yaml")
-	copyTestData(t, fs, "test_data/v1chart/requirements.yaml", "requirements.yaml")
-	hdf := newHelmDependencyFetchTest(fs, MockGetter{})
-
-	// When
-	deps, err := hdf.ParseDependencies()
-
-	// Then
-	assert.NoError(t, err, "Failed to parse ependencies from v1 Chart.yaml")
-	assert.Equal(t, 1, len(*deps), "Expected a single dependency to be parsed")
-}
-
-func TestCreateChartsDirectory(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	hdf := newHelmDependencyFetchTest(fs, MockGetter{})
-
-	// When
-	err := hdf.CreateChartsDirectory()
-
-	// Then
-	assert.NoError(t, err, "Failed to call CreateChartsDirectory")
-
-	stat, err := fs.Stat("charts")
-	assert.NoError(t, err, "Failed to check existence of charts directory")
-	assert.True(t, stat.IsDir(), "charts should be a directory")
-}
-
-func TestCreateChartsDirectory_AlreadyExists(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	fs.Mkdir("charts", 0777)
-	hdf := newHelmDependencyFetchTest(fs, MockGetter{})
-
-	// When
-	err := hdf.CreateChartsDirectory()
-
-	// Then
-	assert.NoError(t, err, "Failed to call CreateChartsDirectory")
-
-	stat, err := fs.Stat("charts")
-	assert.NoError(t, err, "Failed to check existence of charts directory")
-	assert.True(t, stat.IsDir(), "charts should be a directory")
 }
 
 func TestFetchVersion(t *testing.T) {
@@ -145,11 +88,4 @@ func TestFetchVersionAbsoluteUrl(t *testing.T) {
 	stat, err := fs.Stat("charts/foo-0.1.0.tgz")
 	assert.NoError(t, err, "Failed to check existence of downloaded chart")
 	assert.Greater(t, stat.Size(), int64(10), "Resulting chart package should be more than a few bytes in size")
-}
-
-func TestCredsForRepository(t *testing.T) {
-	repos := helm.Repositories{Repositories: []helm.Repository{{Password: "foo", Username: "bar", Url: "http://localhost:8080"}}}
-	user, pass := getCredsForRepository(&repos, "http://localhost:8080")
-	assert.Equal(t, "foo", pass)
-	assert.Equal(t, "bar", user)
 }
