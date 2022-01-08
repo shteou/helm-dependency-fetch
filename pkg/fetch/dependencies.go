@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -15,7 +16,7 @@ import (
 	"gopkg.in/yaml.v1"
 )
 
-func (f *HelmDependencyFetch) FetchVersion(dependency helm.Dependency) error {
+func (f *HelmDependencyFetch) FetchVersion(ctx context.Context, dependency helm.Dependency) error {
 	if !strings.HasPrefix(dependency.Repository, "file://") {
 		repos, err := f.parseRepositories()
 		if err != nil {
@@ -24,7 +25,7 @@ func (f *HelmDependencyFetch) FetchVersion(dependency helm.Dependency) error {
 
 		username, password := getCredsForRepository(repos, dependency.Repository)
 
-		index, err := f.getIndex(dependency.Repository, username, password)
+		index, err := f.getIndex(ctx, dependency.Repository, username, password)
 		if err != nil {
 			return err
 		}
@@ -45,23 +46,23 @@ func (f *HelmDependencyFetch) FetchVersion(dependency helm.Dependency) error {
 		} else {
 			chartUrlString = fmt.Sprintf("%s/%s", strings.TrimSuffix(dependency.Repository, "/"), entry.Urls[0])
 		}
-		return f.fetchURLChart(chartUrlString, dependency.Name, version.String(), username, password)
+		return f.fetchURLChart(ctx, chartUrlString, dependency.Name, version.String(), username, password)
 	}
 
 	return f.fetchFileChart(dependency.Repository)
 }
 
-func (f *HelmDependencyFetch) fetchIndex(repo string, username string, password string) (*helm.Index, error) {
+func (f *HelmDependencyFetch) fetchIndex(ctx context.Context, repo string, username string, password string) (*helm.Index, error) {
 	index := helm.Index{}
 
 	fmt.Printf("Fetching index from %s\n", repo)
 
-	resp, err := f.Get.Get(fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repo, "/")), username, password)
-	defer resp.Body.Close()
-
+	resp, err := f.Get.Get(ctx, fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repo, "/")), username, password)
 	if err != nil {
 		return nil, err
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return nil, errors.New(fmt.Sprintf("Failed to retrieve index (status: %s)", resp.Status))
@@ -80,9 +81,9 @@ func (f *HelmDependencyFetch) fetchIndex(repo string, username string, password 
 	return &index, nil
 }
 
-func (f *HelmDependencyFetch) fetchURLChart(url string, name string, version string, username string, password string) error {
+func (f *HelmDependencyFetch) fetchURLChart(ctx context.Context, url string, name string, version string, username string, password string) error {
 	fmt.Printf("\tFetching chart: %s\n", url)
-	resp, err := f.Get.Get(url, username, password)
+	resp, err := f.Get.Get(ctx, url, username, password)
 	if err != nil {
 		return err
 	}

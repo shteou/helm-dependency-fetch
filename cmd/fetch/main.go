@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/shteou/helm-dependency-fetch/pkg/fetch"
 )
@@ -18,13 +20,18 @@ func printUsage() {
 	fmt.Println("  The tool will fetch the latest dependencies on each execution.")
 	fmt.Println("")
 	fmt.Println("Flags:")
-	fmt.Println("  -h, --help  help for this command")
+	fmt.Println("  -t, --timeout a timeout, in seconds, for the fetch command")
+	fmt.Println("  -h, --help    help for this command")
 }
 
 func main() {
 	chartDirectory := "."
 
 	flag.Usage = printUsage
+
+	var timeoutSeconds uint
+	flag.UintVar(&timeoutSeconds, "timeout", 300, "a timeout, in seconds, for the fetch command")
+	flag.UintVar(&timeoutSeconds, "t", 300, "a timeout, in seconds, for the fetch command")
 
 	flag.Parse()
 	if flag.NArg() > 0 {
@@ -50,9 +57,12 @@ func main() {
 		log.Fatalf("Failed to manage charts directory %+v", err)
 	}
 
+	timeout, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeoutSeconds))
+	defer cancel()
+
 	for _, dependency := range *dependencies {
 		fmt.Printf("Fetching %s @ %s\n", dependency.Name, dependency.Version)
-		err := f.FetchVersion(dependency)
+		err := f.FetchVersion(timeout, dependency)
 		if err != nil {
 			log.Fatalf("Error fetching dependencies: %+v", err)
 		}
