@@ -57,11 +57,11 @@ func (f *HelmDependencyFetch) fetchIndex(repo string, username string, password 
 	fmt.Printf("Fetching index from %s\n", repo)
 
 	resp, err := f.Get.Get(fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repo, "/")), username, password)
-	defer resp.Body.Close()
 
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return nil, errors.New(fmt.Sprintf("Failed to retrieve index (status: %s)", resp.Status))
