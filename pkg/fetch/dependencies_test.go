@@ -65,7 +65,7 @@ func TestFetchVersion(t *testing.T) {
 	assert.Greater(t, stat.Size(), int64(10), "Resulting chart package should be more than a few bytes in size")
 }
 
-func TestFetchPrereleaseVersion(t *testing.T) {
+func TestFetchVersion_PrereleaseFromPrereleases(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	fs.Mkdir("charts", 0777)
 	mockResponse := MockGetter{Response: &http.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte("hello world")))}}
@@ -94,7 +94,7 @@ func TestFetchPrereleaseVersion(t *testing.T) {
 	assert.Greater(t, stat.Size(), int64(10), "Resulting chart package should be more than a few bytes in size")
 }
 
-func TestFetchPrereleaseVersionWithStableRelease(t *testing.T) {
+func TestFetchVersion_PrereleaseFromPrereleasesAndStable(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	fs.Mkdir("charts", 0777)
 	mockResponse := MockGetter{Response: &http.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte("hello world")))}}
@@ -127,7 +127,7 @@ func TestFetchPrereleaseVersionWithStableRelease(t *testing.T) {
 	assert.Greater(t, stat.Size(), int64(10), "Resulting chart package should be more than a few bytes in size")
 }
 
-func TestFetchWithoutPrereleaseConstraint(t *testing.T) {
+func TestFetchVersion_StableFromStableAndPrereleases(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	fs.Mkdir("charts", 0777)
 	mockResponse := MockGetter{Response: &http.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte("hello world")))}}
@@ -160,7 +160,7 @@ func TestFetchWithoutPrereleaseConstraint(t *testing.T) {
 	assert.Greater(t, stat.Size(), int64(10), "Resulting chart package should be more than a few bytes in size")
 }
 
-func TestFetchNoPrerelease(t *testing.T) {
+func TestFetchVersion_StableFromPreleases(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	fs.Mkdir("charts", 0777)
 	mockResponse := MockGetter{Response: &http.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte("hello world")))}}
@@ -187,7 +187,7 @@ func TestFetchNoPrerelease(t *testing.T) {
 	assert.Equal(t, "couldn't find a semver to satisfy the constraint", err.Error())
 }
 
-func TestFetchVersionAbsoluteUrl(t *testing.T) {
+func TestFetchVersion_AbsoluteUrl(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	fs.Mkdir("charts", 0777)
 	mockResponse := MockGetter{Response: &http.Response{Body: ioutil.NopCloser(bytes.NewReader([]byte("hello world")))}}
