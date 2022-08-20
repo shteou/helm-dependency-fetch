@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"context"
 	"os"
 
 	"github.com/shteou/helm-dependency-fetch/pkg/helm"
@@ -52,11 +53,11 @@ func (f *HelmDependencyFetch) fetchRequirements() (*[]helm.Dependency, error) {
 	return &requirements.Dependencies, err
 }
 
-func (f *HelmDependencyFetch) getIndex(repo string, username string, password string) (*helm.Index, error) {
+func (f *HelmDependencyFetch) getIndex(ctx context.Context, repo string, username string, password string) (*helm.Index, error) {
 	var index helm.Index
 
 	if _, ok := f.Indexes[repo]; !ok {
-		retrievedIndex, err := f.fetchIndex(repo, username, password)
+		retrievedIndex, err := f.fetchIndex(ctx, repo, username, password)
 		if err != nil {
 			return nil, err
 		}

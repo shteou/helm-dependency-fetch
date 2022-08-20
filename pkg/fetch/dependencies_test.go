@@ -2,6 +2,7 @@ package fetch
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -19,7 +20,7 @@ type MockGetter struct {
 	Error    error
 }
 
-func (m MockGetter) Get(url string, username string, password string) (*http.Response, error) {
+func (m MockGetter) Get(ctx context.Context, url string, username string, password string) (*http.Response, error) {
 	return m.Response, m.Error
 }
 
@@ -56,7 +57,7 @@ func TestFetchVersion(t *testing.T) {
 	}
 
 	// When
-	err := hdf.FetchVersion(helm.Dependency{Name: "foo", Repository: "http://localhost:8080", Version: ">= 0.1.0"})
+	err := hdf.FetchVersion(context.TODO(), helm.Dependency{Name: "foo", Repository: "http://localhost:8080", Version: ">= 0.1.0"})
 
 	// Then
 	assert.NoError(t, err, "Failed to fetch chart version")
@@ -81,7 +82,7 @@ func TestFetchVersionAbsoluteUrl(t *testing.T) {
 	}
 
 	// When
-	err := hdf.FetchVersion(helm.Dependency{Name: "foo", Repository: "http://localhost:8080", Version: ">= 0.1.0"})
+	err := hdf.FetchVersion(context.TODO(), helm.Dependency{Name: "foo", Repository: "http://localhost:8080", Version: ">= 0.1.0"})
 
 	// Then
 	assert.NoError(t, err, "Failed to fetch chart version")

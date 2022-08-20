@@ -1,19 +1,19 @@
 package getters
 
 import (
+	"context"
 	"net/http"
-	"time"
 )
 
 type Getter interface {
-	Get(string, string, string) (*http.Response, error)
+	Get(context.Context, string, string, string) (*http.Response, error)
 }
 
 type NetworkGetter struct {
 }
 
-func (NetworkGetter) Get(url string, username string, password string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (NetworkGetter) Get(ctx context.Context, url string, username string, password string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -22,9 +22,6 @@ func (NetworkGetter) Get(url string, username string, password string) (*http.Re
 		req.SetBasicAuth(username, password)
 	}
 
-	client := &http.Client{
-		Timeout: time.Second * 60,
-	}
-
+	client := NewHttpClient()
 	return client.Do(req)
 }
