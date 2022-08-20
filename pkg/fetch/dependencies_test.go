@@ -181,7 +181,6 @@ func TestFetchNoPrerelease(t *testing.T) {
 
 	// When
 	err := hdf.FetchVersion(helm.Dependency{Name: "foo", Repository: "http://localhost:8080", Version: ">= 0.1.0"})
-	fmt.Println(err.Error())
 
 	// Then
 	assert.Error(t, err, "Managed to download a chart when none was expected")
