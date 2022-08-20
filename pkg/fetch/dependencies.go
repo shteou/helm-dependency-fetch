@@ -58,9 +58,11 @@ func (f *HelmDependencyFetch) fetchIndex(ctx context.Context, repo string, usern
 	fmt.Printf("Fetching index from %s\n", repo)
 
 	resp, err := f.Get.Get(ctx, fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repo, "/")), username, password)
-	if err != nil {
+
+  if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	defer resp.Body.Close()
 
